@@ -11,12 +11,14 @@ grid = [[(None, None), ('2', 0), ('3', 1), (None, None), (None, None)],
 """
 
 def convert_grid_to_quantum_circuit(grid):
-    print(grid)
     list_quantum_register = [None for _ in grid[0]]
     list_classical_register = [None for _ in grid[0]]
+
+    quantum_register_name_number = 0
     for i in range(len(grid[0])):
         if grid[0][i][0] == '2':
-            list_quantum_register[i] = QuantumRegister(1)
+            list_quantum_register[i] = QuantumRegister(1, f"q{quantum_register_name_number}")
+            quantum_register_name_number += 1
         elif grid[0][i][0] == '3':
             list_classical_register[i] = ClassicalRegister(1)
     liste_register = list_quantum_register+list_classical_register

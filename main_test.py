@@ -3,10 +3,14 @@ import sys
 from time import sleep
 
 from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QGraphicsView 
-from PyQt6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QListWidget, QListWidgetItem, QWidget
-from PyQt6.QtWidgets import QGraphicsItem, QPushButton, QGraphicsRectItem, QGraphicsLineItem
+from PyQt6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QListWidget, QListWidgetItem
+from PyQt6.QtWidgets import QGraphicsItem, QPushButton, QGraphicsRectItem, QGraphicsLineItem, QGraphicsSimpleTextItem
+from PyQt6.QtWidgets import QWidget, QDialog, QLabel, QLineEdit
+
 from PyQt6.QtGui import QPixmap, QDragEnterEvent, QDropEvent, QColor, QDragMoveEvent, QTransform, QPen
-from PyQt6.QtCore import Qt, QMimeData, QDataStream, QIODevice, QEvent, QTimer, QPointF, QRectF
+from PyQt6.QtGui import QFont
+from PyQt6.QtCore import Qt, QDataStream, QIODevice, QEvent, QTimer, QPointF, QRectF, QLineF
+from PyQt6.QtCore import QMimeData
 
 #____________________________________________________________________
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
@@ -25,6 +29,9 @@ class Block:
         self.logical_number = logical_number
         self.image_path = image_path
 
+        if identifier == "4":
+            self.classical_outpout = 0
+
 class ItemSprite:
     """
     C'est une classe qui s'occupe de gerer la position des items
@@ -34,6 +41,23 @@ class ItemSprite:
         self.description = item_description
         self.image_path = image_path
         self.identifiant = identifiant
+
+
+class NumberInputDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Enter a Number")
+        layout = QVBoxLayout()
+        self.number_input = QLineEdit()
+        layout.addWidget(QLabel("Enter a number:"))
+        layout.addWidget(self.number_input)
+        self.ok_button = QPushButton("OK")
+        self.ok_button.clicked.connect(self.accept)
+        layout.addWidget(self.ok_button)
+        self.setLayout(layout)
+
+    def get_number(self):
+        return int(self.number_input.text()) if self.exec() else None
 
 class SandboxScene(QGraphicsScene):
     """
@@ -107,19 +131,47 @@ class SandboxScene(QGraphicsScene):
     def add_block(self, block):
         grid_x, grid_y = self.pixel_to_grid(block.position)
 
+        if self.grid[grid_x][grid_y] is None:
+            self.grid[grid_x][grid_y] = block
+            block.position = self.grid_to_pixel(grid_x, grid_y)
+        else:
+            new_x, new_y = self.find_nearest_valid_position(grid_x, grid_y)
+            self.grid[new_x][new_y] = block
+            block.position = self.grid_to_pixel(new_x, new_y)
+
+
         pixmap = QPixmap(block.image_path)
         scaled_pixmap = pixmap.scaled(50, 50)
         pixmap_item = QGraphicsPixmapItem(scaled_pixmap)
         pixmap_item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
         pixmap_item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        pixmap_item.setPos(*block.position)
 
         self.addItem(pixmap_item)
 
         # Définir l'attribut 'id' pour le QGraphicsPixmapItem
         pixmap_item.id = block.identifier  # Utilisez l'identifiant du bloc comme ID
 
-        self.grid[grid_x][grid_y] = block
-        block.position = self.grid_to_pixel(grid_x, grid_y)
+        
+
+        
+
+         # Ajouter un carré gris clair en dessous de l'image du bloc
+        rect_item = QGraphicsRectItem(0, 0, 12, 16, pixmap_item)
+        rect_item.setBrush(QColor(200, 200, 200))
+
+        # Ajouter le numéro au-dessus de l'image du bloc
+        number_text = QGraphicsSimpleTextItem(str(block.logical_number), pixmap_item)
+        font = QFont()
+        font.setPointSize(12)
+        number_text.setFont(font)
+        number_text.setBrush(QColor("black"))
+        number_text.setPos(0, 0)
+
+        if block.identifier == "4":
+            number_dialog = NumberInputDialog()
+            block.classical_output = number_dialog.get_number()
+
 
         # Définir l'identifiant du bloc comme une donnée sur l'élément pixmap
         pixmap_item.setData(0, block.identifier)
@@ -191,11 +243,25 @@ class SandboxScene(QGraphicsScene):
             if isinstance(item, QGraphicsPixmapItem):
                 # Enregistrez la position initiale de l'objet
                 self.initial_position = item.pos()
-
-
+        # Appeler la fonction mousePressEvent de la classe parent
         super().mousePressEvent(event)
 
-    def mouseReleaseEvent(self, event):
+    def find_nearest_valid_position(self, grid_x, grid_y):
+            """
+            Fonction qui trouve la place libre pour un qblock déplacé
+            """
+            n = self.parent_window.taille_globale
+            for dz in range(n+1):
+                for dx in range(-dz, dz):
+                    for dy in range(-dz, dz):
+                        new_x = grid_x + dx
+                        new_y = grid_y + dy
+                        if self.is_valid_position(new_x, new_y) and self.grid[new_x][new_y] is None:
+                            return new_x, new_y
+            return None
+
+
+    def mouseReleaseEvent(self, event):        
         if event.button() == Qt.MouseButton.LeftButton:
             # Vérifiez si un objet est sélectionné
             item = self.itemAt(event.scenePos(), QTransform())
@@ -210,13 +276,25 @@ class SandboxScene(QGraphicsScene):
                 # Déplacez l'objet vers les nouvelles coordonnées
                 item.setPos(new_position)
 
-                # Mettez à jour la grille avec le nouvel emplacement de l'objet
-                initial_grid_x, initial_grid_y = self.pixel_to_grid((int(self.initial_position.x()), int(self.initial_position.y())))
-                current_grid_x, current_grid_y = self.pixel_to_grid((int(new_position.x()), int(new_position.y())))
-                if self.is_valid_position(initial_grid_x, initial_grid_y) and self.is_valid_position(current_grid_x, current_grid_y):
-                    self.grid[current_grid_x][current_grid_y] = self.grid[initial_grid_x][initial_grid_y]
-                    self.grid[initial_grid_x][initial_grid_y] = None
-
+                if self.grid[grid_x][grid_y] is None:
+                    # Mettez à jour la grille avec le nouvel emplacement de l'objet
+                    initial_grid_x, initial_grid_y = self.pixel_to_grid((int(self.initial_position.x()), int(self.initial_position.y())))
+                    current_grid_x, current_grid_y = self.pixel_to_grid((int(new_position.x()), int(new_position.y())))
+                    if self.is_valid_position(initial_grid_x, initial_grid_y) and self.is_valid_position(current_grid_x, current_grid_y):
+                        self.grid[grid_x][grid_y] = self.grid[initial_grid_x][initial_grid_y]
+                        self.grid[initial_grid_x][initial_grid_y] = None
+                else:
+                    #Pour ne pas supperposer les qblocks
+                    new_x, new_y = self.find_nearest_valid_position(grid_x, grid_y)
+                    print(new_x, new_y)
+                    new_position = QPointF(new_x * 50, new_y * 50)
+                    item.setPos(new_position)
+                    # Mettez à jour la grille avec le nouvel emplacement de l'objet
+                    initial_grid_x, initial_grid_y = self.pixel_to_grid((int(self.initial_position.x()), int(self.initial_position.y())))
+                    current_grid_x, current_grid_y = self.pixel_to_grid((int(new_position.x()), int(new_position.y())))
+                    if self.is_valid_position(initial_grid_x, initial_grid_y) and self.is_valid_position(current_grid_x, current_grid_y):
+                        self.grid[new_x][new_y] = self.grid[initial_grid_x][initial_grid_y]
+                        self.grid[initial_grid_x][initial_grid_y] = None
 
         super().mouseReleaseEvent(event)
 
@@ -330,11 +408,11 @@ def main():
 
     # Créez quelques objets ItemSprite
     items = [
-        ItemSprite("H", "", "H_gate.png", "0"),
-        ItemSprite("X", "", "X_gate.png", "1"),
-        ItemSprite("Psi", "", "Psi.png", "2"),
-        ItemSprite("Cb", "", "Cb_A.png", "3"),
-        ItemSprite("Ms", "", "Mesure.png", "4")
+        ItemSprite("H", "", "images/H_gate.png", "0"),
+        ItemSprite("X", "", "images/X_gate.png", "1"),
+        ItemSprite("Psi", "", "images/Psi.png", "2"),
+        ItemSprite("Cb", "", "images/Cb_A.png", "3"),
+        ItemSprite("Ms", "", "images/Mesure.png", "4")
     ]
 
     another_window = AnotherWindow(items)
