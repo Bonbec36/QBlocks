@@ -1,4 +1,7 @@
 1) Faire le systeme de stream
-2) Faire les regles de non "cumul"
 3) Mettre ajouter le blocks de mesure et sa mécanique
 4) Ajouter la simulation
+
+_____________________________________________
+
+FAIT X-----2) Faire les regles de non "cumul", !!! regler les problèmes de cumul

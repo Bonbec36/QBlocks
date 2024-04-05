@@ -1,0 +1,4 @@
+quiskit
+PyQt6
+numpy
+matplotlib
