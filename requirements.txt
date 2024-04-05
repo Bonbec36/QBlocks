@@ -1,4 +1,4 @@
-quiskit
+qiskit
 PyQt6
 numpy
 matplotlib
