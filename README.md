@@ -1,4 +1,9 @@
 # QBlocks
 Just a personnal project
 
-git clone
+'''python
+git clone 
+cd Qblocks
+pip install -r requirements.txt
+python main.py
+'''
