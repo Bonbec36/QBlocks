@@ -1,22 +1,27 @@
 
 import sys
 from time import sleep
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+
+#___________________________________________________________________________________________________
 
 from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QGraphicsView 
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QListWidget, QListWidgetItem
 from PyQt6.QtWidgets import QGraphicsItem, QPushButton, QGraphicsRectItem, QGraphicsLineItem, QGraphicsSimpleTextItem
-from PyQt6.QtWidgets import QWidget, QDialog, QLabel, QLineEdit
+from PyQt6.QtWidgets import QWidget, QDialog, QLabel, QLineEdit, QMenu, QMenuBar
 
 from PyQt6.QtGui import QPixmap, QDragEnterEvent, QDropEvent, QColor, QDragMoveEvent, QTransform, QPen
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QAction, QImage
 from PyQt6.QtCore import Qt, QDataStream, QIODevice, QEvent, QTimer, QPointF, QRectF, QLineF
 from PyQt6.QtCore import QMimeData
 
 #____________________________________________________________________
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.primitives import Sampler
-from qiskit.visualization import plot_histogram
+from qiskit.visualization import plot_histogram, circuit_drawer
 from Functions import convert_grid_to_quantum_circuit
+
 
 
 class Block:
@@ -29,8 +34,29 @@ class Block:
         self.logical_number = logical_number
         self.image_path = image_path
 
-        if identifier == "4":
-            self.classical_outpout = 0
+        if self.identifier == "4":
+            self.classical_output = 0
+
+
+    @staticmethod
+    def find_block_by_identifier(matrix, lg_number):
+        """
+        Recherche un bloc dans une matrice à partir de son identifiant.
+
+        Args:
+            matrix (list[list[Block]]): La matrice contenant les blocs.
+            identifier (int): L'identifiant du bloc à rechercher.
+
+        Returns:
+            Block: Le bloc correspondant à l'identifiant, ou None si aucun bloc avec cet identifiant n'est trouvé.
+        """
+        result = [[x.logical_number == lg_number if x is not None else None for x in row] for row in matrix ]
+        block = [matrix[i][j] for i, row in enumerate(result) for j, value in enumerate(row) if value is True][0]
+
+        return block
+    
+    def get_grid_position(self):
+        return (round(self.position[0]/50), round(self.position[1]/50))
 
 class ItemSprite:
     """
@@ -223,16 +249,15 @@ class SandboxScene(QGraphicsScene):
 
     def run_graph(self):
         # Créer une grille contenant des tuples (identifiant, indice) pour chaque position
-        self.block_info_grid = [[(None, None) for _ in range(self.grid_size[1])] for _ in range(self.grid_size[0])]
+        self.block_info_grid = [[None for _ in range(self.grid_size[1])] for _ in range(self.grid_size[0])]
 
         # Parcourir la grille principale et mettre à jour la grille d'informations sur les blocs
         for i in range(self.grid_size[0]):
             for j in range(self.grid_size[1]):
                 if self.grid[i][j] is not None:
-                    self.block_info_grid[i][j] = (self.grid[i][j].identifier, self.grid[i][j].logical_number)
-
+                    self.block_info_grid[i][j] = self.grid[i][j]
         # Afficher la grille d'informations sur les blocs
-        convert_grid_to_quantum_circuit(self.block_info_grid)
+        self.parent_window.circuit_quantique = convert_grid_to_quantum_circuit(self.block_info_grid)
         
 
     # Redéfinissez les méthodes de clic et de glissement
@@ -285,8 +310,7 @@ class SandboxScene(QGraphicsScene):
                         self.grid[initial_grid_x][initial_grid_y] = None
                 else:
                     #Pour ne pas supperposer les qblocks
-                    new_x, new_y = self.find_nearest_valid_position(grid_x, grid_y)
-                    print(new_x, new_y)
+                    new_x, new_y = self.find_nearest_valid_position(grid_x, grid_y) 
                     new_position = QPointF(new_x * 50, new_y * 50)
                     item.setPos(new_position)
                     # Mettez à jour la grille avec le nouvel emplacement de l'objet
@@ -328,6 +352,44 @@ class SandboxScene(QGraphicsScene):
                     # Supprimer le bloc de la scène
                     self.removeItem(item)
 
+class Scene1(QGraphicsScene):
+    def __init__(self, parent_window):
+        self.parent_window = parent_window
+        super().__init__()
+        self.setSceneRect(0, 0, 800, 600)  # Définir la taille de la scène
+
+    # Dessiner le circuit quantique
+        pixmap = self.draw_circuit(self.parent_window.circuit_quantique)
+
+        pixmap_item = QGraphicsPixmapItem(pixmap)
+
+        self.addItem(pixmap_item)
+
+    def draw_circuit(self, circuit):
+        # Créer une représentation graphique du circuit avec matplotlib
+        fig, ax = plt.subplots()
+        qc_image = circuit_drawer(circuit, output='mpl', ax=ax)
+
+        # Convertir l'image matplotlib en QImage
+        canvas = FigureCanvas(fig)
+        canvas.draw()
+
+        # Convertir le canevas en une image QImage
+        width, height = canvas.get_width_height()
+        image = QImage(canvas.buffer_rgba(), width, height, QImage.Format.Format_ARGB32)
+
+        # Convertir l'image QImage en une image pixmap
+        pixmap = QPixmap.fromImage(image)
+
+        return pixmap
+
+
+class Scene2(QGraphicsScene):
+    def __init__(self):
+        super().__init__()
+        self.setSceneRect(0, 0, 800, 600)  # Définir la taille de la scène
+        self.addText("This is Scene 2")
+
 
 class AnotherWindow(QWidget):
     """
@@ -338,6 +400,7 @@ class AnotherWindow(QWidget):
 
         self.block_count = 0
         self.taille_globale = 5
+        self.circuit_quantique = None
         self.setFixedSize(800, 600)
 
         layout = QVBoxLayout(self)
@@ -360,10 +423,27 @@ class AnotherWindow(QWidget):
 
         graphics_vbox_layout = QVBoxLayout()
 
+        graph_buttons_layout = QHBoxLayout()
+
+        button_scene1 = QPushButton("Labs")
+        button_scene1.clicked.connect(self.do_nothing)
+        graph_buttons_layout.addWidget(button_scene1)
+
+        button_scene2 = QPushButton("Circuit")
+        button_scene2.clicked.connect(self.show_scene2)
+        graph_buttons_layout.addWidget(button_scene2)
+
+        button_scene3 = QPushButton("Mesures")
+        button_scene3.clicked.connect(self.do_nothing)
+        graph_buttons_layout.addWidget(button_scene3)
+
+        graphics_vbox_layout.addLayout(graph_buttons_layout)
         # Créer une QGraphicsView pour la zone de sandbox
         self.sandbox_view = QGraphicsView()
         self.sandbox_scene = SandboxScene(self, grid_size=(self.taille_globale, self.taille_globale))
         self.sandbox_view.setScene(self.sandbox_scene)
+
+
         graphics_vbox_layout.addWidget(self.sandbox_view)
 
         button_run_graph = QPushButton("Run")
@@ -377,6 +457,8 @@ class AnotherWindow(QWidget):
         hbox_layout.addLayout(graphics_vbox_layout)
 
         layout.addLayout(hbox_layout)
+
+
 
 
         # Connecter le signal itemClicked à la méthode create_block lorsque l'utilisateur clique sur un élément de la liste
@@ -399,9 +481,29 @@ class AnotherWindow(QWidget):
         self.block_count += 1
         print(f"block count : {self.block_count}")
 
-    def analyze_scene(self):
-        # Analyser la scène ici
-        print("Analyzing the scene...")
+    def show_sandbox_scene(self):
+        # Restaurer les éléments de la scène sandbox principale
+        self.sandbox_scene.clear_scene()
+        for item in self.main_sandbox_items:
+            self.sandbox_scene.add_item(item)
+
+    def closeEvent(self, event):
+        # Sauvegardez les éléments de la scène sandbox principale lorsque la fenêtre se ferme
+        #self.main_sandbox_items = self.sandbox_scene.get_items()
+        event.accept()
+
+
+    def show_scene2(self):
+        # Afficher la deuxième scène dans la QGraphicsView
+        self.sandbox_view.setScene(Scene1(self))
+
+    def show_scene3(self):
+        # Afficher la deuxième scène dans la QGraphicsView
+        self.sandbox_view.setScene(Scene2())
+
+    def do_nothing(self):
+        print("do nothing")
+
 
 def main():
     app = QApplication(sys.argv)
