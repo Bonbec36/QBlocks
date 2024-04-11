@@ -1,6 +1,8 @@
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.primitives import Sampler
 from qiskit.visualization import plot_histogram
+from qiskit_aer import AerSimulator
+import matplotlib.pyplot as plt
 
 """
 grid = [[(None, None), ('2', 0), ('3', 1), (None, None), (None, None)], 
@@ -44,7 +46,14 @@ def convert_grid_to_quantum_circuit(grid):
     return qc
 
 def simulate_quantum_circuit(circuit):
-    print(circuit)
+
+    sim_ideal = AerSimulator()
+
+        # Execute and get counts
+    result = sim_ideal.run(circuit, shots=100, memory=True).result()
+    counts = result.get_counts(0)
+    return plot_histogram(counts)
+
 
 """
 X = QuantumRegister(1, "X")

@@ -109,6 +109,7 @@ class SandboxGraphicsView(QGraphicsView):
     def run_graph(self):
         print(self.scene())
         self.scene().run_graph()
+        self.parent_window.result_histogram = simulate_quantum_circuit(self.parent_window.circuit_quantique)
 
 
 
@@ -132,7 +133,30 @@ class QuantumGraphGraphicsView(QGraphicsView):
         #print("Restored items in View 1:", self.saved_items)
 
     def run_graph(self):
-        simulate_quantum_circuit(self.parent_window.circuit_qauntique)
+        print("second")
+
+class ResultplotGraphicsView(QGraphicsView):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_window = parent
+        self.setScene(ResultPlotScene(self.parent_window, self))
+        self.saved_items = []  # Initialisation de la liste saved_items
+        self.setGeometry(0, 0, 200, 200)
+
+    def save_scene_elements(self):
+        # Exemple de sauvegarde d'éléments de scène
+        items = self.scene().items()
+        self.saved_items = [item for item in items]
+        #print("Saved items in View 1:", self.saved_items)
+
+    def restore_scene_elements(self):
+        # Exemple de restauration d'éléments de scène
+        for item in self.saved_items:
+            self.scene().addItem(item)
+        #print("Restored items in View 1:", self.saved_items)
+
+    def run_graph(self):
+        print("second")
 
 
 class SandboxScene(QGraphicsScene):
@@ -445,13 +469,35 @@ class QuantumGraphScene(QGraphicsScene):
         pixmap = QPixmap.fromImage(image)
 
         return pixmap
-
-
-class Scene2(QGraphicsScene):
-    def __init__(self):
+    
+class ResultPlotScene(QGraphicsScene):
+    def __init__(self, parent_window, parent_graphicsview):
+        self.parent_window = parent_window
+        self.parent_graphicsview = parent_graphicsview
         super().__init__()
-        self.setSceneRect(0, 0, 800, 600)  # Définir la taille de la scène
-        self.addText("This is Scene 2")
+        #self.setSceneRect() # Définir la taille de la scène
+
+    # Dessiner le circuit quantique
+        pixmap = self.plot_result(self.parent_window.result_histogram)
+
+        pixmap_item = QGraphicsPixmapItem(pixmap)
+
+        self.addItem(pixmap_item)
+
+    def plot_result(self, histogram):
+
+        # Convertir l'image matplotlib en QImage
+        canvas = FigureCanvas(histogram)
+        canvas.draw()
+
+        # Convertir le canevas en une image QImage
+        width, height = canvas.get_width_height()
+        image = QImage(canvas.buffer_rgba(), width, height, QImage.Format.Format_ARGB32)
+
+        # Convertir l'image QImage en une image pixmap
+        pixmap = QPixmap.fromImage(image).scaled(500, 400)
+
+        return pixmap
 
 
 class AnotherWindow(QWidget):
@@ -501,13 +547,12 @@ class AnotherWindow(QWidget):
         self.graph_buttons_layout.addWidget(button_scene2)
 
         button_scene3 = QPushButton("Mesures")
-        button_scene3.clicked.connect(self.do_nothing)
+        button_scene3.clicked.connect(self.show_result_graphview)
         self.graph_buttons_layout.addWidget(button_scene3)
 
         self.graphics_vbox_layout.addLayout(self.graph_buttons_layout)
         # Créer une QGraphicsView pour la zone de sandbox
         self.current_view = SandboxGraphicsView(parent=self)
-
 
         self.graphics_vbox_layout.addWidget(self.current_view)
 
@@ -559,7 +604,7 @@ class AnotherWindow(QWidget):
 
 
     def show_quantum_graphview(self):
-        if isinstance(self.current_view, SandboxGraphicsView):
+        if isinstance(self.current_view, SandboxGraphicsView) or isinstance(self.current_view, ResultplotGraphicsView):
             self.current_view.save_scene_elements()
         self.current_view = QuantumGraphGraphicsView(self)
 
@@ -568,7 +613,7 @@ class AnotherWindow(QWidget):
         self.current_view.restore_scene_elements()
 
     def show_sandbox_graphview(self):
-        if isinstance(self.current_view, QuantumGraphGraphicsView):
+        if isinstance(self.current_view, QuantumGraphGraphicsView) or isinstance(self.current_view, ResultplotGraphicsView):
             self.current_view.save_scene_elements()
         self.current_view = SandboxGraphicsView(self)
 
@@ -576,9 +621,15 @@ class AnotherWindow(QWidget):
         self.graphics_vbox_layout.replaceWidget(self.graphics_vbox_layout.itemAt(1).widget(), self.current_view)
         self.current_view.restore_scene_elements()
 
-    def show_scene3(self):
-        # Afficher la deuxième scène dans la QGraphicsView
-        self.sandbox_view.setScene(Scene2())
+    def show_result_graphview(self):
+        if isinstance(self.current_view, QuantumGraphGraphicsView) or isinstance(self.current_view, SandboxGraphicsView):
+            self.current_view.save_scene_elements()
+        self.current_view = ResultplotGraphicsView(self)
+
+
+        self.graphics_vbox_layout.replaceWidget(self.graphics_vbox_layout.itemAt(1).widget(), self.current_view)
+        self.current_view.restore_scene_elements()
+
 
     def do_nothing(self):
         print("do nothing")
