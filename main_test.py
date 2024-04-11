@@ -24,6 +24,8 @@ from Functions import convert_grid_to_quantum_circuit, simulate_quantum_circuit
 
 
 
+
+
 class Block:
     """
     C'est une classe qui s'occupe de gerer la position des blocks et tous leurs paramètres
@@ -62,11 +64,12 @@ class ItemSprite:
     """
     C'est une classe qui s'occupe de gerer la position des items
     """
-    def __init__(self, item_name, item_description, image_path, identifiant):
+    def __init__(self, item_name, item_description, image_path, identifiant, shape):
         self.name = item_name
         self.description = item_description
         self.image_path = image_path
         self.identifiant = identifiant
+        self.shape = shape
 
 
 class NumberInputDialog(QDialog):
@@ -492,10 +495,11 @@ class ResultPlotScene(QGraphicsScene):
 
         # Convertir le canevas en une image QImage
         width, height = canvas.get_width_height()
+        print(width, height)
         image = QImage(canvas.buffer_rgba(), width, height, QImage.Format.Format_ARGB32)
 
         # Convertir l'image QImage en une image pixmap
-        pixmap = QPixmap.fromImage(image).scaled(500, 400)
+        pixmap = QPixmap.fromImage(image).scaled(700, 500)
 
         return pixmap
 
@@ -640,11 +644,13 @@ def main():
 
     # Créez quelques objets ItemSprite
     items = [
-        ItemSprite("H", "", "images/H_gate.png", "0"),
-        ItemSprite("X", "", "images/X_gate.png", "1"),
-        ItemSprite("Psi", "", "images/Psi.png", "2"),
-        ItemSprite("Cb", "", "images/Cb_A.png", "3"),
-        ItemSprite("Ms", "", "images/Mesure.png", "4")
+        ItemSprite("H", "", "images/H_gate.png", "0", (1, 1)),
+        ItemSprite("X", "", "images/X_gate.png", "1", (1, 1)),
+        ItemSprite("Psi", "", "images/Psi.png", "2", (1, 1)),
+        ItemSprite("Cb", "", "images/Cb_A.png", "3", (1, 1)),
+        ItemSprite("Ms", "", "images/Mesure.png", "4", (1, 1)),
+        ItemSprite("Y", "", "images/Y_gate.png", "5", (1, 1)),
+        ItemSprite("Z", "", "images/Z_gate.png", "6", (1, 1)),
     ]
 
     another_window = AnotherWindow(items)

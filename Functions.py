@@ -38,6 +38,10 @@ def convert_grid_to_quantum_circuit(grid):
                     qc.h(list_quantum_register[i])
                 elif grid[j][i].identifier == '1' and grid[0][i].identifier == '2':
                     qc.x(list_quantum_register[i])
+                elif grid[j][i].identifier == '5' and grid[0][i].identifier == '2':
+                    qc.y(list_quantum_register[i])
+                elif grid[j][i].identifier == '6' and grid[0][i].identifier == '2':
+                    qc.z(list_quantum_register[i])
                 elif grid[j][i].identifier == '4' and grid[0][i].identifier == '2':
                     connected_calssical_register = grid[j][i].find_block_by_identifier(grid, grid[j][i].classical_output)
                     qc.measure(list_quantum_register[i], list_classical_register[connected_calssical_register.get_grid_position()[1]])
@@ -47,12 +51,15 @@ def convert_grid_to_quantum_circuit(grid):
 
 def simulate_quantum_circuit(circuit):
 
+
     sim_ideal = AerSimulator()
 
         # Execute and get counts
     result = sim_ideal.run(circuit, shots=100, memory=True).result()
     counts = result.get_counts(0)
-    return plot_histogram(counts)
+
+    fig = plot_histogram(counts)
+    return fig
 
 
 """
