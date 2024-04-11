@@ -20,7 +20,7 @@ from PyQt6.QtCore import QMimeData
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.primitives import Sampler
 from qiskit.visualization import plot_histogram, circuit_drawer
-from Functions import convert_grid_to_quantum_circuit
+from Functions import convert_grid_to_quantum_circuit, simulate_quantum_circuit
 
 
 
@@ -84,12 +84,62 @@ class NumberInputDialog(QDialog):
 
     def get_number(self):
         return int(self.number_input.text()) if self.exec() else None
+    
+class SandboxGraphicsView(QGraphicsView):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_window = parent
+        self.saved_items = []  # Initialisation de la liste saved_items
+        self.scene_grid_save = None
+        if self.parent_window.SBGV_saved_scene is None:
+            self.current_scene = SandboxScene(self.parent_window)  # Créez la scène initiale
+            self.setScene(self.current_scene)
+        else:
+            self.current_scene = self.parent_window.SBGV_saved_scene
+
+    def save_scene_elements(self):
+        self.parent_window.SBGV_saved_blocks = [block for row in self.scene().grid for block in row if block is not None]
+        self.parent_window.SBGV_saved_scene = self.current_scene
+
+    def restore_scene_elements(self):
+        # Exemple de restauration d'éléments de scène
+        self.setScene(self.parent_window.SBGV_saved_scene)
+        #self.scene().restore_grid(self.parent_window.SBGV_saved_blocks)
+
+    def run_graph(self):
+        print(self.scene())
+        self.scene().run_graph()
+
+
+
+class QuantumGraphGraphicsView(QGraphicsView):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_window = parent
+        self.setScene(QuantumGraphScene(self.parent_window))
+        self.saved_items = []  # Initialisation de la liste saved_items
+
+    def save_scene_elements(self):
+        # Exemple de sauvegarde d'éléments de scène
+        items = self.scene().items()
+        self.saved_items = [item for item in items]
+        #print("Saved items in View 1:", self.saved_items)
+
+    def restore_scene_elements(self):
+        # Exemple de restauration d'éléments de scène
+        for item in self.saved_items:
+            self.scene().addItem(item)
+        #print("Restored items in View 1:", self.saved_items)
+
+    def run_graph(self):
+        simulate_quantum_circuit(self.parent_window.circuit_qauntique)
+
 
 class SandboxScene(QGraphicsScene):
     """
     C'est une classe qui permet de gérer la sandbox, c'est à dire l'endroit où l'on place les blocks
     """
-    def __init__(self, parent_window, grid_size=(10, 10)):
+    def __init__(self, parent_window, grid_size=(6, 6)):
         super().__init__()
         self.grid_size = grid_size
         self.parent_window = parent_window
@@ -154,8 +204,10 @@ class SandboxScene(QGraphicsScene):
             self.block_lines[block_id] = [line]
             """
     
-    def add_block(self, block):
+    def add_block(self, block, restore=False):
         grid_x, grid_y = self.pixel_to_grid(block.position)
+
+        print(self)
 
         if self.grid[grid_x][grid_y] is None:
             self.grid[grid_x][grid_y] = block
@@ -164,7 +216,6 @@ class SandboxScene(QGraphicsScene):
             new_x, new_y = self.find_nearest_valid_position(grid_x, grid_y)
             self.grid[new_x][new_y] = block
             block.position = self.grid_to_pixel(new_x, new_y)
-
 
         pixmap = QPixmap(block.image_path)
         scaled_pixmap = pixmap.scaled(50, 50)
@@ -194,7 +245,7 @@ class SandboxScene(QGraphicsScene):
         number_text.setBrush(QColor("black"))
         number_text.setPos(0, 0)
 
-        if block.identifier == "4":
+        if block.identifier == "4" and restore == False:
             number_dialog = NumberInputDialog()
             block.classical_output = number_dialog.get_number()
 
@@ -308,6 +359,9 @@ class SandboxScene(QGraphicsScene):
                     if self.is_valid_position(initial_grid_x, initial_grid_y) and self.is_valid_position(current_grid_x, current_grid_y):
                         self.grid[grid_x][grid_y] = self.grid[initial_grid_x][initial_grid_y]
                         self.grid[initial_grid_x][initial_grid_y] = None
+
+                        #On actualise la position du block
+                        self.grid[grid_x][grid_y].position = (int(new_position.x()), int(new_position.y())) 
                 else:
                     #Pour ne pas supperposer les qblocks
                     new_x, new_y = self.find_nearest_valid_position(grid_x, grid_y) 
@@ -319,6 +373,9 @@ class SandboxScene(QGraphicsScene):
                     if self.is_valid_position(initial_grid_x, initial_grid_y) and self.is_valid_position(current_grid_x, current_grid_y):
                         self.grid[new_x][new_y] = self.grid[initial_grid_x][initial_grid_y]
                         self.grid[initial_grid_x][initial_grid_y] = None
+
+                        #On actualise la position du block
+                        self.grid[new_x][new_y].position = (int(new_position.x()), int(new_position.y())) 
 
         super().mouseReleaseEvent(event)
 
@@ -352,7 +409,13 @@ class SandboxScene(QGraphicsScene):
                     # Supprimer le bloc de la scène
                     self.removeItem(item)
 
-class Scene1(QGraphicsScene):
+    def restore_grid(self, liste_bocks):
+
+        for block in liste_bocks:
+            self.add_block(block)
+
+
+class QuantumGraphScene(QGraphicsScene):
     def __init__(self, parent_window):
         self.parent_window = parent_window
         super().__init__()
@@ -401,6 +464,10 @@ class AnotherWindow(QWidget):
         self.block_count = 0
         self.taille_globale = 5
         self.circuit_quantique = None
+        self.SBGV_saved_blocks = []
+        self.SBGV_saved_scene = None
+
+        
         self.setFixedSize(800, 600)
 
         layout = QVBoxLayout(self)
@@ -421,40 +488,38 @@ class AnotherWindow(QWidget):
 
         
 
-        graphics_vbox_layout = QVBoxLayout()
+        self.graphics_vbox_layout = QVBoxLayout()
 
-        graph_buttons_layout = QHBoxLayout()
+        self.graph_buttons_layout = QHBoxLayout()
 
         button_scene1 = QPushButton("Labs")
-        button_scene1.clicked.connect(self.do_nothing)
-        graph_buttons_layout.addWidget(button_scene1)
+        button_scene1.clicked.connect(self.show_sandbox_graphview)
+        self.graph_buttons_layout.addWidget(button_scene1)
 
         button_scene2 = QPushButton("Circuit")
-        button_scene2.clicked.connect(self.show_scene2)
-        graph_buttons_layout.addWidget(button_scene2)
+        button_scene2.clicked.connect(self.show_quantum_graphview)
+        self.graph_buttons_layout.addWidget(button_scene2)
 
         button_scene3 = QPushButton("Mesures")
         button_scene3.clicked.connect(self.do_nothing)
-        graph_buttons_layout.addWidget(button_scene3)
+        self.graph_buttons_layout.addWidget(button_scene3)
 
-        graphics_vbox_layout.addLayout(graph_buttons_layout)
+        self.graphics_vbox_layout.addLayout(self.graph_buttons_layout)
         # Créer une QGraphicsView pour la zone de sandbox
-        self.sandbox_view = QGraphicsView()
-        self.sandbox_scene = SandboxScene(self, grid_size=(self.taille_globale, self.taille_globale))
-        self.sandbox_view.setScene(self.sandbox_scene)
+        self.current_view = SandboxGraphicsView(parent=self)
 
 
-        graphics_vbox_layout.addWidget(self.sandbox_view)
+        self.graphics_vbox_layout.addWidget(self.current_view)
 
         button_run_graph = QPushButton("Run")
-        button_run_graph.clicked.connect(self.sandbox_scene.run_graph)
-        graphics_vbox_layout.addWidget(button_run_graph)
+        button_run_graph.clicked.connect(self.current_view.run_graph)
+        self.graphics_vbox_layout.addWidget(button_run_graph)
 
         button_clear_graph = QPushButton("Clear graph")
-        button_clear_graph.clicked.connect(self.sandbox_scene.clear_scene)
-        graphics_vbox_layout.addWidget(button_clear_graph)
+        button_clear_graph.clicked.connect(self.current_view.scene().clear_scene)
+        self.graphics_vbox_layout.addWidget(button_clear_graph)
 
-        hbox_layout.addLayout(graphics_vbox_layout)
+        hbox_layout.addLayout(self.graphics_vbox_layout)
 
         layout.addLayout(hbox_layout)
 
@@ -477,7 +542,7 @@ class AnotherWindow(QWidget):
         item_sprite = item.data(Qt.ItemDataRole.UserRole)
         print(f"Create block {item_sprite.name}")
         block = Block(identifier=item_sprite.identifiant, position=(0, 0), logical_number=self.block_count, image_path=item_sprite.image_path)
-        self.sandbox_scene.add_block(block)
+        self.current_view.scene().add_block(block)
         self.block_count += 1
         print(f"block count : {self.block_count}")
 
@@ -493,9 +558,23 @@ class AnotherWindow(QWidget):
         event.accept()
 
 
-    def show_scene2(self):
-        # Afficher la deuxième scène dans la QGraphicsView
-        self.sandbox_view.setScene(Scene1(self))
+    def show_quantum_graphview(self):
+        if isinstance(self.current_view, SandboxGraphicsView):
+            self.current_view.save_scene_elements()
+        self.current_view = QuantumGraphGraphicsView(self)
+
+
+        self.graphics_vbox_layout.replaceWidget(self.graphics_vbox_layout.itemAt(1).widget(), self.current_view)
+        self.current_view.restore_scene_elements()
+
+    def show_sandbox_graphview(self):
+        if isinstance(self.current_view, QuantumGraphGraphicsView):
+            self.current_view.save_scene_elements()
+        self.current_view = SandboxGraphicsView(self)
+
+
+        self.graphics_vbox_layout.replaceWidget(self.graphics_vbox_layout.itemAt(1).widget(), self.current_view)
+        self.current_view.restore_scene_elements()
 
     def show_scene3(self):
         # Afficher la deuxième scène dans la QGraphicsView

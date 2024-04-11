@@ -43,6 +43,9 @@ def convert_grid_to_quantum_circuit(grid):
 
     return qc
 
+def simulate_quantum_circuit(circuit):
+    print(circuit)
+
 """
 X = QuantumRegister(1, "X")
 Y = QuantumRegister(1, "Y")
