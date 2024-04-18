@@ -21,50 +21,16 @@ from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.primitives import Sampler
 from qiskit.visualization import plot_histogram, circuit_drawer
 from Functions import convert_grid_to_quantum_circuit, simulate_quantum_circuit
+from Classes import Block
 
 
 
-
-
-class Block:
-    """
-    C'est une classe qui s'occupe de gerer la position des blocks et tous leurs paramètres
-    """
-    def __init__(self, identifier, position, logical_number, image_path):
-        self.identifier = identifier
-        self.position = position
-        self.logical_number = logical_number
-        self.image_path = image_path
-
-        if self.identifier == "4":
-            self.classical_output = 0
-
-
-    @staticmethod
-    def find_block_by_identifier(matrix, lg_number):
-        """
-        Recherche un bloc dans une matrice à partir de son identifiant.
-
-        Args:
-            matrix (list[list[Block]]): La matrice contenant les blocs.
-            identifier (int): L'identifiant du bloc à rechercher.
-
-        Returns:
-            Block: Le bloc correspondant à l'identifiant, ou None si aucun bloc avec cet identifiant n'est trouvé.
-        """
-        result = [[x.logical_number == lg_number if x is not None else None for x in row] for row in matrix ]
-        block = [matrix[i][j] for i, row in enumerate(result) for j, value in enumerate(row) if value is True][0]
-
-        return block
-    
-    def get_grid_position(self):
-        return (round(self.position[0]/50), round(self.position[1]/50))
 
 class ItemSprite:
     """
     C'est une classe qui s'occupe de gerer la position des items
     """
-    def __init__(self, item_name, item_description, image_path, identifiant, shape):
+    def __init__(self, item_name, item_description, image_path, identifiant, shape=1):
         self.name = item_name
         self.description = item_description
         self.image_path = image_path
@@ -110,7 +76,7 @@ class SandboxGraphicsView(QGraphicsView):
         #self.scene().restore_grid(self.parent_window.SBGV_saved_blocks)
 
     def run_graph(self):
-        print(self.scene())
+        #print(self.scene())
         self.scene().run_graph()
         self.parent_window.result_histogram = simulate_quantum_circuit(self.parent_window.circuit_quantique)
 
@@ -234,18 +200,23 @@ class SandboxScene(QGraphicsScene):
     def add_block(self, block, restore=False):
         grid_x, grid_y = self.pixel_to_grid(block.position)
 
-        print(self)
+        block_shadow = block.shadow
 
-        if self.grid[grid_x][grid_y] is None:
-            self.grid[grid_x][grid_y] = block
+        if all(self.grid[item[0]][item[1]] is None for item in block_shadow):
+            self.grid[block_shadow[0][0]][block_shadow[0][1]] = block
+            for i in range(len(block_shadow)-1):
+                self.grid[block_shadow[i+1][0]][block_shadow[i+1][1]] = block.remplissage
             block.position = self.grid_to_pixel(grid_x, grid_y)
         else:
             new_x, new_y = self.find_nearest_valid_position(grid_x, grid_y)
-            self.grid[new_x][new_y] = block
-            block.position = self.grid_to_pixel(new_x, new_y)
+            block_shadow = [(new_x, new_y+i) for i in range(block.shape)]
+            self.grid[block_shadow[0][0]][block_shadow[0][1]] = block
+            for i in range(len(block_shadow)-1):
+                self.grid[block_shadow[i+1][0]][block_shadow[i+1][1]] = block.remplissage
+            block.set_new_position(self.grid_to_pixel(new_x, new_y))
 
         pixmap = QPixmap(block.image_path)
-        scaled_pixmap = pixmap.scaled(50, 50)
+        scaled_pixmap = pixmap.scaled(50,block.shape*50)
         pixmap_item = QGraphicsPixmapItem(scaled_pixmap)
         pixmap_item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
         pixmap_item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
@@ -255,10 +226,6 @@ class SandboxScene(QGraphicsScene):
 
         # Définir l'attribut 'id' pour le QGraphicsPixmapItem
         pixmap_item.id = block.identifier  # Utilisez l'identifiant du bloc comme ID
-
-        
-
-        
 
          # Ajouter un carré gris clair en dessous de l'image du bloc
         rect_item = QGraphicsRectItem(0, 0, 12, 16, pixmap_item)
@@ -385,10 +352,22 @@ class SandboxScene(QGraphicsScene):
                     current_grid_x, current_grid_y = self.pixel_to_grid((int(new_position.x()), int(new_position.y())))
                     if self.is_valid_position(initial_grid_x, initial_grid_y) and self.is_valid_position(current_grid_x, current_grid_y):
                         self.grid[grid_x][grid_y] = self.grid[initial_grid_x][initial_grid_y]
-                        self.grid[initial_grid_x][initial_grid_y] = None
+
+
+                        #On enlève tout le block précédent
+                        block = self.grid[initial_grid_x][initial_grid_y]
+
+                        for coord in block.shadow:
+
+                            self.grid[coord[0]][coord[1]] = None
 
                         #On actualise la position du block
-                        self.grid[grid_x][grid_y].position = (int(new_position.x()), int(new_position.y())) 
+                        self.grid[grid_x][grid_y].set_new_position((int(new_position.x()), int(new_position.y())))
+                        
+                        block_shadow = self.grid[current_grid_x][current_grid_y].shadow
+                        for i in range(len(block_shadow)-1):
+                            self.grid[block_shadow[i+1][0]][block_shadow[i+1][1]] = block.remplissage
+
                 else:
                     #Pour ne pas supperposer les qblocks
                     new_x, new_y = self.find_nearest_valid_position(grid_x, grid_y) 
@@ -399,10 +378,19 @@ class SandboxScene(QGraphicsScene):
                     current_grid_x, current_grid_y = self.pixel_to_grid((int(new_position.x()), int(new_position.y())))
                     if self.is_valid_position(initial_grid_x, initial_grid_y) and self.is_valid_position(current_grid_x, current_grid_y):
                         self.grid[new_x][new_y] = self.grid[initial_grid_x][initial_grid_y]
-                        self.grid[initial_grid_x][initial_grid_y] = None
+
+                        #On enlève tout le block précédent
+                        block = self.grid[initial_grid_x][initial_grid_y]
+
+                        for coord in block.shadow:
+                            self.grid[coord[0]][coord[1]] = None
 
                         #On actualise la position du block
-                        self.grid[new_x][new_y].position = (int(new_position.x()), int(new_position.y())) 
+                        self.grid[current_grid_x][current_grid_y].set_new_position((int(new_position.x()), int(new_position.y())))
+                        
+                        block_shadow = self.grid[current_grid_x][current_grid_y].shadow
+                        for i in range(len(block_shadow)-1):
+                            self.grid[block_shadow[i+1][0]][block_shadow[i+1][1]] = block.remplissage
 
         super().mouseReleaseEvent(event)
 
@@ -495,7 +483,6 @@ class ResultPlotScene(QGraphicsScene):
 
         # Convertir le canevas en une image QImage
         width, height = canvas.get_width_height()
-        print(width, height)
         image = QImage(canvas.buffer_rgba(), width, height, QImage.Format.Format_ARGB32)
 
         # Convertir l'image QImage en une image pixmap
@@ -590,7 +577,8 @@ class AnotherWindow(QWidget):
     def create_block(self, item):
         item_sprite = item.data(Qt.ItemDataRole.UserRole)
         print(f"Create block {item_sprite.name}")
-        block = Block(identifier=item_sprite.identifiant, position=(0, 0), logical_number=self.block_count, image_path=item_sprite.image_path)
+        block = Block(identifier=item_sprite.identifiant, position=(0, 0), logical_number=self.block_count, image_path=item_sprite.image_path,
+                       shape=item_sprite.shape)
         self.current_view.scene().add_block(block)
         self.block_count += 1
         print(f"block count : {self.block_count}")
@@ -644,13 +632,14 @@ def main():
 
     # Créez quelques objets ItemSprite
     items = [
-        ItemSprite("H", "", "images/H_gate.png", "0", (1, 1)),
-        ItemSprite("X", "", "images/X_gate.png", "1", (1, 1)),
-        ItemSprite("Psi", "", "images/Psi.png", "2", (1, 1)),
-        ItemSprite("Cb", "", "images/Cb_A.png", "3", (1, 1)),
-        ItemSprite("Ms", "", "images/Mesure.png", "4", (1, 1)),
-        ItemSprite("Y", "", "images/Y_gate.png", "5", (1, 1)),
-        ItemSprite("Z", "", "images/Z_gate.png", "6", (1, 1)),
+        ItemSprite("H", "", "images/H_gate.png", "0"),
+        ItemSprite("X", "", "images/X_gate.png", "1"),
+        ItemSprite("Psi", "", "images/Psi.png", "2"),
+        ItemSprite("Cb", "", "images/Cb_A.png", "3"),
+        ItemSprite("Ms", "", "images/Mesure.png", "4"),
+        ItemSprite("Y", "", "images/Y_gate.png", "5"),
+        ItemSprite("Z", "", "images/Z_gate.png", "6"),
+        ItemSprite("CX", "", "images/CX_gate.png", "7", shape=2),
     ]
 
     another_window = AnotherWindow(items)

@@ -2,6 +2,8 @@ from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.primitives import Sampler
 from qiskit.visualization import plot_histogram
 from qiskit_aer import AerSimulator
+
+from Classes import Block
 import matplotlib.pyplot as plt
 
 """
@@ -33,7 +35,7 @@ def convert_grid_to_quantum_circuit(grid):
     
     for j in range(1, len(grid)-1):
         for i in range(len(grid[0])):
-            if grid[j][i] is not None:
+            if isinstance(grid[j][i], Block):
                 if grid[j][i].identifier == '0' and grid[0][i].identifier == '2':
                     qc.h(list_quantum_register[i])
                 elif grid[j][i].identifier == '1' and grid[0][i].identifier == '2':
@@ -45,6 +47,8 @@ def convert_grid_to_quantum_circuit(grid):
                 elif grid[j][i].identifier == '4' and grid[0][i].identifier == '2':
                     connected_calssical_register = grid[j][i].find_block_by_identifier(grid, grid[j][i].classical_output)
                     qc.measure(list_quantum_register[i], list_classical_register[connected_calssical_register.get_grid_position()[1]])
+                elif grid[j][i].identifier == '7' and grid[0][i].identifier == '2' and grid[0][i+1].identifier == '2':
+                    qc.cx(list_quantum_register[i], list_quantum_register[i+1])
     print(qc.draw())
 
     return qc
@@ -55,7 +59,7 @@ def simulate_quantum_circuit(circuit):
     sim_ideal = AerSimulator()
 
         # Execute and get counts
-    result = sim_ideal.run(circuit, shots=100, memory=True).result()
+    result = sim_ideal.run(circuit, shots=1000, memory=True).result()
     counts = result.get_counts(0)
 
     fig = plot_histogram(counts)
