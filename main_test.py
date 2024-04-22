@@ -3,13 +3,14 @@ import sys
 from time import sleep
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+import pickle
 
 #___________________________________________________________________________________________________
 
 from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QGraphicsView 
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QListWidget, QListWidgetItem
 from PyQt6.QtWidgets import QGraphicsItem, QPushButton, QGraphicsRectItem, QGraphicsLineItem, QGraphicsSimpleTextItem
-from PyQt6.QtWidgets import QWidget, QDialog, QLabel, QLineEdit, QMenu, QMenuBar
+from PyQt6.QtWidgets import QWidget, QDialog, QLabel, QLineEdit, QMenu, QMenuBar, QGraphicsTextItem
 
 from PyQt6.QtGui import QPixmap, QDragEnterEvent, QDropEvent, QColor, QDragMoveEvent, QTransform, QPen
 from PyQt6.QtGui import QFont, QAction, QImage
@@ -21,7 +22,7 @@ from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.primitives import Sampler
 from qiskit.visualization import plot_histogram, circuit_drawer
 from Functions import convert_grid_to_quantum_circuit, simulate_quantum_circuit
-from Classes import Block
+from Classes import Block, CircuitItem
 
 
 
@@ -127,6 +128,99 @@ class ResultplotGraphicsView(QGraphicsView):
     def run_graph(self):
         print("second")
 
+class LibraryGraphicsView(QGraphicsView):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_window = parent
+        self.setScene(LibraryScene(self.parent_window))
+        self.saved_items = []  # Initialisation de la liste saved_items
+        self.setGeometry(0, 0, 200, 200)
+
+        if self.scene().items():
+            # Récupérez le premier élément de la scène
+            first_item = self.scene().items()[-1]
+
+            # Assurez-vous que la vue affiche le premier élément de la scène
+            self.ensureVisible(first_item)
+
+
+    def save_scene_elements(self):
+        # Exemple de sauvegarde d'éléments de scène
+        items = self.scene().items()
+        self.saved_items = [item for item in items]
+        #print("Saved items in View 1:", self.saved_items)
+
+    def restore_scene_elements(self):
+        # Exemple de restauration d'éléments de scène
+        for item in self.saved_items:
+            self.scene().addItem(item)
+        #print("Restored items in View 1:", self.saved_items)
+
+    def run_graph(self):
+        print("second")
+
+
+class LibraryScene(QGraphicsScene):
+    def __init__(self, parent_window):
+        super().__init__()
+        self.parent_window = parent_window
+
+        # List of pre-defined circuits
+        self.circuits = [
+            CircuitItem("Test Alpha", "L'utilisation des 1er cubits", "circuit1_image.png", 1, "files/bibliotheque/test_blocks_data.pkl"),
+            CircuitItem("Circuit 2", "Description of Circuit 2", "circuit2_image.png", 1),
+            CircuitItem("Qbit intriqués", "Description of Circuit 3", "circuit3_image.png", 1, "files/bibliotheque/Entangled_BD.pkl"),
+            CircuitItem("Circuit 4", "Description of Circuit 4", "circuit2_image.png", 1),
+            CircuitItem("Circuit 5", "Description of Circuit 5", "circuit3_image.png", 1),
+            # Add more circuits as needed
+        ]
+
+        self.create_circuit_items()
+
+    def create_circuit_items(self):
+        # Create items for each circuit
+        for i, circuit in enumerate(self.circuits):
+            # Image
+            pixmap = QPixmap(circuit.image_path)
+            pixmap_item = QGraphicsPixmapItem(pixmap)
+            pixmap_item.setPos(0, i * 150)
+            self.addItem(pixmap_item)
+
+            # Name
+            name_text = QGraphicsTextItem(circuit.name)
+            name_text.setFont(QFont("Arial", 12))
+            name_text.setPos(100, i * 150)
+            self.addItem(name_text)
+
+            # Description
+            desc_text = QGraphicsTextItem(circuit.description)
+            desc_text.setFont(QFont("Arial", 10))
+            desc_text.setPos(100, i * 150 + 30)
+            self.addItem(desc_text)
+
+            # Load button
+            load_button = QPushButton("Load")
+            load_button.setFixedSize(80, 30)
+            load_button.clicked.connect(lambda state, circuit=circuit: self.load_circuit(circuit))
+            load_button_item = self.addWidget(load_button)
+            load_button_item.setPos(100, i * 150 + 60)
+
+
+    def load_circuit(self, circuit):
+        print(f"Loading {circuit.name}")
+
+                # Lecture des objets Block à partir du fichier
+        with open(circuit.block_file, "rb") as f: 
+            self.parent_window.SBGV_saved_blocks = pickle.load(f)
+
+        self.parent_window.SBGV_saved_scene.restore_grid(self.parent_window.SBGV_saved_blocks)
+        self.parent_window.SBGV_saved_scene.run_graph()
+        print(self.parent_window.SBGV_saved_blocks)
+
+
+
+
+
 
 class SandboxScene(QGraphicsScene):
     """
@@ -134,8 +228,9 @@ class SandboxScene(QGraphicsScene):
     """
     def __init__(self, parent_window, grid_size=(6, 6)):
         super().__init__()
-        self.grid_size = grid_size
+        #self.grid_size = grid_size
         self.parent_window = parent_window
+        self.grid_size = (self.parent_window.taille_globale, self.parent_window.taille_globale)
         self.scale = 50
         self.stream_number = 0
         self.grid = [[None for _ in range(self.grid_size[1])] for _ in range(self.grid_size[0])]
@@ -427,7 +522,7 @@ class SandboxScene(QGraphicsScene):
     def restore_grid(self, liste_bocks):
 
         for block in liste_bocks:
-            self.add_block(block)
+            self.add_block(block, restore=True)
 
 
 class QuantumGraphScene(QGraphicsScene):
@@ -499,7 +594,7 @@ class AnotherWindow(QWidget):
         super().__init__()
 
         self.block_count = 0
-        self.taille_globale = 5
+        self.taille_globale = 6
         self.circuit_quantique = None
         self.SBGV_saved_blocks = []
         self.SBGV_saved_scene = None
@@ -540,6 +635,10 @@ class AnotherWindow(QWidget):
         button_scene3 = QPushButton("Mesures")
         button_scene3.clicked.connect(self.show_result_graphview)
         self.graph_buttons_layout.addWidget(button_scene3)
+
+        button_scene4 = QPushButton("Bibliotheque")
+        button_scene4.clicked.connect(self.show_library_graphview)
+        self.graph_buttons_layout.addWidget(button_scene4)
 
         self.graphics_vbox_layout.addLayout(self.graph_buttons_layout)
         # Créer une QGraphicsView pour la zone de sandbox
@@ -596,7 +695,7 @@ class AnotherWindow(QWidget):
 
 
     def show_quantum_graphview(self):
-        if isinstance(self.current_view, SandboxGraphicsView) or isinstance(self.current_view, ResultplotGraphicsView):
+        if isinstance(self.current_view, (SandboxGraphicsView, ResultplotGraphicsView, LibraryGraphicsView)):
             self.current_view.save_scene_elements()
         self.current_view = QuantumGraphGraphicsView(self)
 
@@ -605,7 +704,7 @@ class AnotherWindow(QWidget):
         self.current_view.restore_scene_elements()
 
     def show_sandbox_graphview(self):
-        if isinstance(self.current_view, QuantumGraphGraphicsView) or isinstance(self.current_view, ResultplotGraphicsView):
+        if isinstance(self.current_view, (QuantumGraphGraphicsView, ResultplotGraphicsView, LibraryGraphicsView)):
             self.current_view.save_scene_elements()
         self.current_view = SandboxGraphicsView(self)
 
@@ -614,9 +713,18 @@ class AnotherWindow(QWidget):
         self.current_view.restore_scene_elements()
 
     def show_result_graphview(self):
-        if isinstance(self.current_view, QuantumGraphGraphicsView) or isinstance(self.current_view, SandboxGraphicsView):
+        if isinstance(self.current_view, (QuantumGraphGraphicsView, SandboxGraphicsView, LibraryGraphicsView)):
             self.current_view.save_scene_elements()
         self.current_view = ResultplotGraphicsView(self)
+
+
+        self.graphics_vbox_layout.replaceWidget(self.graphics_vbox_layout.itemAt(1).widget(), self.current_view)
+        self.current_view.restore_scene_elements()
+
+    def show_library_graphview(self):
+        if isinstance(self.current_view, (QuantumGraphGraphicsView, SandboxGraphicsView, ResultplotGraphicsView)):
+            self.current_view.save_scene_elements()
+        self.current_view = LibraryGraphicsView(self)
 
 
         self.graphics_vbox_layout.replaceWidget(self.graphics_vbox_layout.itemAt(1).widget(), self.current_view)

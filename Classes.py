@@ -2,17 +2,16 @@ class Block:
     """
     C'est une classe qui s'occupe de gerer la position des blocks et tous leurs paramètres
     """
-    def __init__(self, identifier, position, logical_number, image_path, shape=1):
+    def __init__(self, identifier, position, logical_number, image_path, shape=1, classical_output=None):
         self.identifier = identifier
         self.position = position
+        self.classical_output = classical_output
         self.logical_number = logical_number
         self.image_path = image_path
         self.shape = shape
         self.shadow = [(int(self.position[0]/50), int(self.position[1]/50) + i ) for i in range(self.shape)]
 
-        if self.identifier == "4":
-            self.classical_output = 0
-
+        
         if shape > 1:
             self.remplissage = {"Block relie" : self.logical_number}
             
@@ -40,3 +39,14 @@ class Block:
     
     def get_grid_position(self):
         return (round(self.position[0]/50), round(self.position[1]/50))
+    
+
+class CircuitItem:
+    def __init__(self, name, description, image_path, circuit=1, block_file=None):
+        self.name = name
+        self.description = description
+        self.image_path = image_path
+        self.circuit = circuit
+        self.block_file = block_file 
+
+    
