@@ -1,3 +1,7 @@
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QPushButton, QLabel, QLineEdit
+
+
+
 class Block:
     """
     C'est une classe qui s'occupe de gerer la position des blocks et tous leurs paramètres
@@ -49,4 +53,19 @@ class CircuitItem:
         self.circuit = circuit
         self.block_file = block_file 
 
+class NumberInputDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Enter a Number")
+        layout = QVBoxLayout()
+        self.number_input = QLineEdit()
+        layout.addWidget(QLabel("Enter a number:"))
+        layout.addWidget(self.number_input)
+        self.ok_button = QPushButton("OK")
+        self.ok_button.clicked.connect(self.accept)
+        layout.addWidget(self.ok_button)
+        self.setLayout(layout)
+
+    def get_number(self):
+        return int(self.number_input.text()) if self.exec() else None
     

@@ -6,14 +6,6 @@ from qiskit_aer import AerSimulator
 from Classes import Block
 import matplotlib.pyplot as plt
 
-"""
-grid = [[(None, None), ('2', 0), ('3', 1), (None, None), (None, None)], 
-        [(None, None), ('1', 3), (None, None), (None, None), (None, None)],
-        [(None, None), ('4', 2), (None, None), (None, None), (None, None)], 
-        [(None, None), (None, None), (None, None), (None, None), (None, None)], 
-        [(None, None), (None, None), (None, None), (None, None), (None, None)]]
-"""
-
 def convert_grid_to_quantum_circuit(grid):
     list_quantum_register = [None for _ in grid[0]]
     list_classical_register = [None for _ in grid[0]]
@@ -64,19 +56,3 @@ def simulate_quantum_circuit(circuit):
 
     fig = plot_histogram(counts)
     return fig
-
-
-"""
-X = QuantumRegister(1, "X")
-Y = QuantumRegister(1, "Y")
-A = ClassicalRegister(1, "A")
-B = ClassicalRegister(1, "B")
-
-circuit = QuantumCircuit(Y, X, B, A)
-circuit.h(Y)
-circuit.cx(Y, X)
-circuit.measure(Y, B)
-circuit.measure(X, A)
-
-print(circuit.draw())
-"""
