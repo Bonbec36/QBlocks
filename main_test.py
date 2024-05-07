@@ -122,6 +122,11 @@ class ResultplotGraphicsView(QGraphicsView):
     def run_graph(self):
         print("second")
 
+    def change_plot_params(self, shot, qbit_type):
+        self.parent_window.result_histogram = simulate_quantum_circuit(self.parent_window.circuit_quantique, shot=shot, qbit_type=qbit_type)
+        self.setScene(ResultPlotScene(self.parent_window, self))
+
+
 class LibraryGraphicsView(QGraphicsView):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -601,8 +606,15 @@ class AnotherWindow(QWidget):
         self.block_count = 0
         self.taille_globale = 6
         self.circuit_quantique = None
+
+        #__________________________________
         self.SBGV_saved_blocks = []
         self.SBGV_saved_scene = None
+
+        #__________________________________
+        self.RPS_shots = 10_000
+        self.RPS_qbit_methods = 'statevector'
+
 
         
         self.setFixedSize(850, 600)
@@ -773,6 +785,11 @@ class AnotherWindow(QWidget):
             
             self.current_view.change_scene_size(self.taille_globale)
 
+        if isinstance(self.current_view, ResultplotGraphicsView):
+            #self.current_view.save_scene_elements()
+            dialog = ResultPlotDialog(self)
+            dialog.exec()
+            self.current_view.change_plot_params(self.RPS_shots, self.RPS_qbit_methods)
 
     def do_nothing(self):
         print("do nothing")

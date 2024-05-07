@@ -3,7 +3,7 @@
 6) Gerer les formes et les tailles de toutes les widgets et interfaces
 7) Ajouter une animation des modifications du Qbit avec une Bloch schere
 8) Les bugs avec CX
-9) Ajouter le panneau de configuration pour la simulation
+9) Ajouter le panneau de configuration pour la simulation !!! A ameliorer
 10) Regler le problèmes avec les bibliothèque 
 10.5) Enregistrer une bibliothèque
 11) Faire un systeme de creation de blocks

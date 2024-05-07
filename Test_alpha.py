@@ -1,75 +1,41 @@
-import sys
-from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QDialog, QVBoxLayout, QLabel, QColorDialog, QMessageBox
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor
+from PyQt5.QtWidgets import QApplication, QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QDialogButtonBox
+
 
 class SettingsDialog(QDialog):
     def __init__(self, parent):
         super().__init__(parent)
 
-        self.setWindowTitle("Paramètres")
+        # Création des widgets
+        self.number_label = QLabel("Entrez un nombre:")
+        self.number_edit = QLineEdit()
+        self.item_label = QLabel("Choisissez un élément:")
+        self.item_combobox = QComboBox()
+        self.item_combobox.addItems(["Item 1", "Item 2", "Item 3"])  # Ajoutez vos éléments ici
 
-        self.parent = parent
+        # Boutons de la boîte de dialogue
+        buttons = QDialogButtonBox.Save | QDialogButtonBox.Cancel
+        self.button_box = QDialogButtonBox(buttons)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
 
-        self.layout = QVBoxLayout()
-        self.setLayout(self.layout)
+        # Placement des widgets dans la boîte de dialogue
+        layout = QVBoxLayout()
+        layout.addWidget(self.number_label)
+        layout.addWidget(self.number_edit)
+        layout.addWidget(self.item_label)
+        layout.addWidget(self.item_combobox)
+        layout.addWidget(self.button_box)
+        self.setLayout(layout)
 
-        self.background_label = QLabel("Couleur d'arrière-plan :")
-        self.layout.addWidget(self.background_label)
+    def get_data(self):
+        return self.number_edit.text(), self.item_combobox.currentText()
 
-        self.background_color = QColor(self.parent.bg_color)
-
-        self.color_button = QPushButton("Choisir une couleur")
-        self.color_button.clicked.connect(self.choose_color)
-        self.layout.addWidget(self.color_button)
-
-    def choose_color(self):
-        color = QColorDialog.getColor(self.background_color, self, "Choisir une couleur")
-        if color.isValid():
-            self.background_color = color
-
-    def save_settings(self):
-        self.parent.bg_color = self.background_color.name()
-        self.parent.setStyleSheet(f"background-color: {self.parent.bg_color};")
-        self.accept()
-
-    def closeEvent(self, event):
-        reply = QMessageBox.question(
-            self,
-            "Annuler les modifications",
-            "Êtes-vous sûr de vouloir annuler les modifications ?",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No,
-        )
-        if reply == QMessageBox.Yes:
-            event.accept()
-        else:
-            event.ignore()
-
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-
-        self.setWindowTitle("Fenêtre principale")
-        self.setGeometry(300, 300, 400, 200)
-
-        self.bg_color = "#000000"
-        self.setStyleSheet(f"background-color: {self.bg_color};")
-
-        self.settings_button = QPushButton("Modifier les paramètres")
-        self.settings_button.clicked.connect(self.open_settings_dialog)
-        self.settings_button.setGeometry(160, 80, 180, 30)
-
-        self.setCentralWidget(self.settings_button)
-
-    def open_settings_dialog(self):
-        dialog = SettingsDialog(self)
-        dialog.exec()
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
+    app = QApplication([])
 
-    window = MainWindow()
-    window.show()
-
-    sys.exit(app.exec())
+    dialog = SettingsDialog(None)
+    if dialog.exec_() == QDialog.Accepted:
+        number, item = dialog.get_data()
+        print("Nombre entré:", number)
+        print("Élément choisi:", item)

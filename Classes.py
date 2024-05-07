@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QPushButton, QLabel, QLineEdit
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QPushButton, QLabel, QLineEdit, QComboBox, QDialogButtonBox
 
 
 
@@ -104,3 +104,50 @@ class SandboxParamsDialog(QDialog):
     
     def get_number(self):
         return int(self.input_number)
+    
+class ResultPlotDialog(QDialog):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent_window = parent
+
+        # Création des widgets
+        self.number_label = QLabel("Entrez un nombre:")
+        self.number_edit = QLineEdit()
+        self.item_label = QLabel("Choisissez un élément:")
+        self.item_combobox = QComboBox()
+        self.item_combobox.addItems(['statevector', 'stabilizer', 'extended_stabilizer', 
+                                     'density_matrix','matrix_product_state'])  # Ajoutez vos éléments ici
+
+        # Boutons de la boîte de dialogue
+        self.cancel_button = QPushButton("Annuler")
+        self.save_button = QPushButton("Sauvegarder")
+
+        self.cancel_button.clicked.connect(self.cancel_params)
+        self.save_button.clicked.connect(self.save_params)
+        
+
+        # Placement des widgets dans la boîte de dialogue
+        layout = QVBoxLayout()
+        layout.addWidget(self.number_label)
+        layout.addWidget(self.number_edit)
+        layout.addWidget(self.item_label)
+        layout.addWidget(self.item_combobox)
+        layout.addWidget(self.cancel_button)
+        layout.addWidget(self.save_button)
+
+        self.setLayout(layout)
+
+    def save_params(self):
+        try:
+            self.parent_window.RPS_shots = int(self.number_edit.text())
+        except ValueError:
+            self.parent_window.RPS_shots += 0
+        self.parent_window.RPS_qbit_methods = self.item_combobox.currentText()
+        self.accept()
+    
+    def cancel_params(self):
+        self.accept()
+
+
+    def get_data(self):
+        return int(self.number_edit.text()), self.item_combobox.currentText()

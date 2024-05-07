@@ -47,13 +47,13 @@ def convert_grid_to_quantum_circuit(grid):
 
     return qc
 
-def simulate_quantum_circuit(circuit):
+def simulate_quantum_circuit(circuit, shot=10000, qbit_type='statevector'):
 
 
-    sim_ideal = AerSimulator()
+    sim_ideal = AerSimulator(method=qbit_type)
 
         # Execute and get counts
-    result = sim_ideal.run(circuit, shots=1000, memory=True).result()
+    result = sim_ideal.run(circuit, shots=shot, memory=True).result()
     counts = result.get_counts(0)
 
     fig = plot_histogram(counts)
