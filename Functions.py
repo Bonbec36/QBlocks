@@ -41,6 +41,8 @@ def convert_grid_to_quantum_circuit(grid):
                     qc.measure(list_quantum_register[i], list_classical_register[connected_calssical_register.get_grid_position()[1]])
                 elif grid[j][i].identifier == '7' and grid[0][i].identifier == '2' and grid[0][i+1].identifier == '2':
                     qc.cx(list_quantum_register[i], list_quantum_register[i+1])
+                elif grid[j][i].identifier == '8' and grid[0][i].identifier == '2' and grid[0][i+1].identifier == '2':
+                    qc.cx(list_quantum_register[i+1], list_quantum_register[i])
     print(qc.draw())
 
     return qc

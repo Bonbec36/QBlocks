@@ -69,3 +69,38 @@ class NumberInputDialog(QDialog):
     def get_number(self):
         return int(self.number_input.text()) if self.exec() else None
     
+    
+class SandboxParamsDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_window = parent
+        self.setWindowTitle("Paramètre de la grille")
+        
+        # Éléments de la fenêtre de dialogue
+        self.label = QLabel("Entrez la taille de la grille :")
+        self.text_edit = QLineEdit()
+        self.cancel_button = QPushButton("Annuler")
+        self.save_button = QPushButton("Sauvegarder")
+        self.input_number = 6
+
+        self.cancel_button.clicked.connect(self.cancel_order)
+        self.save_button.clicked.connect(self.save_number)
+        
+        # Layout de la fenêtre de dialogue
+        layout = QVBoxLayout()
+        layout.addWidget(self.label)
+        layout.addWidget(self.text_edit)
+        layout.addWidget(self.cancel_button)
+        layout.addWidget(self.save_button)
+        
+        self.setLayout(layout)
+
+    def cancel_order(self):
+        self.accept()
+
+    def save_number(self):
+        self.parent_window.taille_globale = int(self.text_edit.text())
+        self.accept()
+    
+    def get_number(self):
+        return int(self.input_number)

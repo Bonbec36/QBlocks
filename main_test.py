@@ -70,6 +70,8 @@ class SandboxGraphicsView(QGraphicsView):
         self.scene().run_graph()
         self.parent_window.result_histogram = simulate_quantum_circuit(self.parent_window.circuit_quantique)
 
+    def change_scene_size(self, nouvelle_taille):
+        self.current_scene.change_grid_size(nouvelle_taille)
 
 
 class QuantumGraphGraphicsView(QGraphicsView):
@@ -517,6 +519,14 @@ class SandboxScene(QGraphicsScene):
         for block in liste_bocks:
             self.add_block(block, restore=True)
 
+    def change_grid_size(self, new_size):
+        temp_saved_block = [block for row in self.grid for block in row if block is not None]
+        self.grid_size = (new_size, new_size)
+        self.clear_scene()
+        self.restore_grid(temp_saved_block)
+        
+        
+
 
 class QuantumGraphScene(QGraphicsScene):
     def __init__(self, parent_window):
@@ -618,6 +628,9 @@ class AnotherWindow(QWidget):
         self.graphics_vbox_layout = QVBoxLayout()
 
         self.graph_buttons_layout = QHBoxLayout()
+        
+
+        #Bouton navigation entre les scenne ___debut _________________________________________________
 
         button_scene1 = QPushButton("Labs")
         button_scene1.clicked.connect(self.show_sandbox_graphview)
@@ -635,6 +648,7 @@ class AnotherWindow(QWidget):
         button_scene4.clicked.connect(self.show_library_graphview)
         self.graph_buttons_layout.addWidget(button_scene4)
 
+
         self.graphics_vbox_layout.addLayout(self.graph_buttons_layout)
         # Créer une QGraphicsView pour la zone de sandbox
         self.current_view = SandboxGraphicsView(parent=self)
@@ -643,11 +657,24 @@ class AnotherWindow(QWidget):
 
         self.graph_sub_hbox_layout.addWidget(self.current_view)
 
+        self.graph_sub_button_vbox_layout = QVBoxLayout()
+
         
 
         button_params_scene = QPushButton("Params")
-        button_params_scene.clicked.connect(self.do_nothing)
-        self.graph_sub_hbox_layout.addWidget(button_params_scene)
+        button_params_scene.clicked.connect(self.param_button_fonction)
+        self.graph_sub_button_vbox_layout.addWidget(button_params_scene)
+
+        button_save_as_library = QPushButton("Save as Library")
+        button_save_as_library.clicked.connect(self.do_nothing)
+        self.graph_sub_button_vbox_layout.addWidget(button_save_as_library)
+
+        button_create_new_block = QPushButton("Create new Block")
+        button_create_new_block.clicked.connect(self.do_nothing)
+        self.graph_sub_button_vbox_layout.addWidget(button_create_new_block)
+
+        self.graph_sub_hbox_layout.addLayout(self.graph_sub_button_vbox_layout)
+
 
         self.graphics_vbox_layout.addLayout(self.graph_sub_hbox_layout)
 
@@ -737,6 +764,15 @@ class AnotherWindow(QWidget):
         self.graph_sub_hbox_layout.replaceWidget(self.graph_sub_hbox_layout.itemAt(0).widget(), self.current_view)
         self.current_view.restore_scene_elements()
 
+    def param_button_fonction(self):
+        if isinstance(self.current_view, SandboxGraphicsView):
+            #self.current_view.save_scene_elements()
+            dialog = SandboxParamsDialog(self)
+            dialog.exec()
+            print(self.taille_globale)
+            
+            self.current_view.change_scene_size(self.taille_globale)
+
 
     def do_nothing(self):
         print("do nothing")
@@ -755,6 +791,7 @@ def main():
         ItemSprite("Y", "", "images/Y_gate.png", "5"),
         ItemSprite("Z", "", "images/Z_gate.png", "6"),
         ItemSprite("CX", "", "images/CX_gate.png", "7", shape=2),
+        ItemSprite("CX inv", "", "images/CX_inv_gate.png", "8", shape=2)
     ]
 
     another_window = AnotherWindow(items)
