@@ -169,7 +169,7 @@ class LibraryScene(QGraphicsScene):
             CircuitItem("Test Alpha", "L'utilisation des 1er cubits", "circuit1_image.png", 1, "files/bibliotheque/test_blocks_data.pkl"),
             CircuitItem("Circuit 2", "Description of Circuit 2", "circuit2_image.png", 1),
             CircuitItem("Qbit intriqués", "Description of Circuit 3", "images/Library/003_qc_entangled.png", 1, "files/bibliotheque/Entangled_BD.pkl"),
-            CircuitItem("Circuit 4", "Description of Circuit 4", "circuit2_image.png", 1),
+            CircuitItem("L'additionneur", "Description of Circuit 4", "circuit2_image.png", 1),
             CircuitItem("Circuit 5", "Description of Circuit 5", "circuit3_image.png", 1),
             # Add more circuits as needed
         ]
@@ -808,7 +808,12 @@ def main():
         ItemSprite("Y", "", "images/Y_gate.png", "5"),
         ItemSprite("Z", "", "images/Z_gate.png", "6"),
         ItemSprite("CX", "", "images/CX_gate.png", "7", shape=2),
-        ItemSprite("CX inv", "", "images/CX_inv_gate.png", "8", shape=2)
+        ItemSprite("CX inv", "", "images/CX_inv_gate.png", "8", shape=2),
+        ItemSprite("S", "", "images/S_gate.png", "9"),
+        ItemSprite("Swap", "", "images/Swap_gate.png", "10", shape=2),
+        #ItemSprite("iSwap", "", "images/iSwap_gate.png", "11", shape=2),
+        ItemSprite("T", "", "images/T_gate.png", "12"),
+        ItemSprite("Toff (1)", "", "images/Toff1_gate.png", "13", shape=3),
     ]
 
     another_window = AnotherWindow(items)

@@ -43,6 +43,19 @@ def convert_grid_to_quantum_circuit(grid):
                     qc.cx(list_quantum_register[i], list_quantum_register[i+1])
                 elif grid[j][i].identifier == '8' and grid[0][i].identifier == '2' and grid[0][i+1].identifier == '2':
                     qc.cx(list_quantum_register[i+1], list_quantum_register[i])
+                elif grid[j][i].identifier == '9' and grid[0][i].identifier == '2':
+                    qc.s(list_quantum_register[i])
+                elif grid[j][i].identifier == '10' and grid[0][i].identifier == '2' and grid[0][i+1].identifier == '2':
+                    qc.swap(list_quantum_register[i], list_quantum_register[i+1])
+                    """elif grid[j][i].identifier == '11' and grid[0][i].identifier == '2' and grid[0][i+1].identifier == '2':
+                    qc.iswap(list_quantum_register[i], list_quantum_register[i+1])"""
+                elif grid[j][i].identifier == '12' and grid[0][i].identifier == '2':
+                    qc.t(list_quantum_register[i])
+                    #Faire une liste pour les grid pour les grandes portes
+                elif grid[j][i].identifier == '13' and grid[0][i].identifier == '2' and grid[0][i+1].identifier == '2' and grid[0][i+2].identifier == '2':
+                    qc.ccx(list_quantum_register[i], list_quantum_register[i+1], list_quantum_register[i+2])
+
+
     print(qc.draw())
 
     return qc

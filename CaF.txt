@@ -8,6 +8,7 @@
 10.5) Enregistrer une bibliothèque
 11) Faire un systeme de creation de blocks
 12) Ajout de U1, U2, U3, + toutes les portes logiques : https://en.wikipedia.org/wiki/List_of_quantum_logic_gates#Rotation_operator_gates
+13) Ajouter le CCNOT (puis faire l'additionneur)
 _____________________________________________
 
 FAIT X-----2) Faire les regles de non "cumul", !!! regler les problèmes de cumul
